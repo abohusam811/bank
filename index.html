@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الحسابات البنكية</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="animated-title">إدارة الحسابات البنكية</h1>
+        <div class="form-container">
+            <input type="text" id="accountName" placeholder="اسم العميل">
+            <input type="text" id="phoneNumber" placeholder="رقم الهاتف">
+            <input type="text" id="nationalId" placeholder="الرقم الوطني">
+            <input type="number" id="depositAmount" placeholder="مبلغ الإيداع">
+            <button onclick="addAccount()">إضافة حساب</button>
+        </div>
+
+        <div class="account-list">
+            <h2>الحسابات</h2>
+            <ul id="accountsList"></ul>
+        </div>
+
+        <div class="reports-container">
+            <button onclick="generateExcel()">توليد تقرير Excel</button>
+            <button onclick="generateWord()">توليد تقرير Word</button>
+        </div>
+    </div>
+
+    <script>
+        const sheetId = 'YOUR_GOOGLE_SHEET_ID'; // أدخل معرف جوجل شيت هنا
+        const apiKey = 'YOUR_GOOGLE_API_KEY'; // أدخل مفتاح API هنا
+
+        async function addAccount() {
+            const accountName = document.getElementById('accountName').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const nationalId = document.getElementById('nationalId').value;
+            const depositAmount = document.getElementById('depositAmount').value;
+
+            if (!accountName || !phoneNumber || !nationalId || !depositAmount) {
+                alert("الرجاء إدخال جميع البيانات");
+                return;
+            }
+
+            const accountId = new Date().getTime(); // ID تلقائي باستخدام الوقت الحالي
+
+            const data = {
+                values: [[accountId, accountName, phoneNumber, nationalId, depositAmount]]
+            };
+
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A1:append?valueInputOption=RAW&key=${apiKey}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+                alert("تم إضافة الحساب بنجاح");
+                fetchAccounts();  // تحديث القائمة
+            } else {
+                alert("حدث خطأ أثناء إضافة الحساب");
+            }
+        }
+
+        async function fetchAccounts() {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1?key=${apiKey}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            const accounts = data.values || [];
+
+            const accountsList = document.getElementById('accountsList');
+            accountsList.innerHTML = '';
+
+            accounts.forEach(account => {
+                const li = document.createElement('li');
+                li.innerHTML = `ID الحساب: ${account[0]} | اسم العميل: ${account[1]} | رقم الهاتف: ${account[2]} | الرقم الوطني: ${account[3]} | إيداع: ${account[4]}
+                    <button onclick="deposit(${account[0]})">إيداع</button>
+                    <button onclick="withdraw(${account[0]})">سحب</button>`;
+                accountsList.appendChild(li);
+            });
+        }
+
+        async function deposit(accountId) {
+            const depositAmount = prompt("أدخل مبلغ الإيداع:");
+            if (depositAmount && !isNaN(depositAmount)) {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A${accountId}:E?key=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                const currentBalance = parseFloat(data.values[4]);
+
+                const newBalance = currentBalance + parseFloat(depositAmount);
+                const updateData = {
+                    values: [[newBalance]]
+                };
+
+                await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData),
+                });
+
+                alert("تم الإيداع بنجاح");
+                fetchAccounts();
+            } else {
+                alert("الرجاء إدخال مبلغ صالح");
+            }
+        }
+
+        async function withdraw(accountId) {
+            const withdrawAmount = prompt("أدخل مبلغ السحب:");
+            if (withdrawAmount && !isNaN(withdrawAmount)) {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A${accountId}:E?key=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                const currentBalance = parseFloat(data.values[4]);
+
+                if (currentBalance < withdrawAmount) {
+                    alert("الرصيد غير كافٍ للسحب");
+                    return;
+                }
+
+                const newBalance = currentBalance - parseFloat(withdrawAmount);
+                const updateData = {
+                    values: [[newBalance]]
+                };
+
+                await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData),
+                });
+
+                alert("تم السحب بنجاح");
+                fetchAccounts();
+            } else {
+                alert("الرجاء إدخال مبلغ صالح");
+            }
+        }
+
+        async function generateExcel() {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1?key=${apiKey}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            const accounts = data.values || [];
+
+            let csvContent = "ID الحساب,اسم العميل,رقم الهاتف,الرقم الوطني,إيداع\n";
+
+            accounts.forEach(account => {
+                csvContent += `${account[0]},${account[1]},${account[2]},${account[3]},${account[4]}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "accounts_report.csv";
+            link.click();
+        }
+
+        async function generateWord() {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1?key=${apiKey}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            const accounts = data.values || [];
+
+            let docContent = "<html><body><h1>تقرير الحسابات البنكية</h1><table border='1'><tr><th>ID الحساب</th><th>اسم العميل</th><th>رقم الهاتف</th><th>الرقم الوطني</th><th>إيداع</th></tr>";
+
+            accounts.forEach(account => {
+                docContent += `<tr><td>${account[0]}</td><td>${account[1]}</td><td>${account[2]}</td><td>${account[3]}</td><td>${account[4]}</td></tr>`;
+            });
+
+            docContent += "</table></body></html>";
+
+            const blob = new Blob([docContent], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "accounts_report.doc";
+            link.click();
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchAccounts);
+    </script>
+</body>
+</html>
