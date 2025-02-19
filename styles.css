@@ -1,0 +1,81 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Cairo', sans-serif;
+    background-color: #f0f7ff;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    flex-direction: column;
+}
+
+.container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 80%;
+    max-width: 800px;
+    text-align: center;
+}
+
+.animated-title {
+    color: #0066cc;
+    font-size: 2em;
+    text-align: center;
+    animation: colorWave 2s infinite;
+}
+
+@keyframes colorWave {
+    0% { color: #0066cc; }
+    50% { color: #3399ff; }
+    100% { color: #0066cc; }
+}
+
+button {
+    background-color: #0066cc;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 5px;
+}
+
+button:hover {
+    background-color: #004d99;
+}
+
+input {
+    padding: 10px;
+    margin: 10px;
+    width: 80%;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 1em;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+.account-list ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.account-list li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.reports-container {
+    margin-top: 20px;
+}
